@@ -12,6 +12,10 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<ApiDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddHttpClient("ApiTask", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7132"); 
+});
 // Configure the HTTP request pipeline.
 
 var app = builder.Build();

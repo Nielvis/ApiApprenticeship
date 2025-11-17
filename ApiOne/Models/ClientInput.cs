@@ -1,8 +1,11 @@
-﻿namespace ApiOne.Models
+﻿using Microsoft.JSInterop.Infrastructure;
+using System.ComponentModel.DataAnnotations;
+
+namespace ApiOne.Models
 {
     public class ClientInput
     {
-        public int Id { get; set; }
+        [Key] public int ClientId { get; set; }
 
         public string Name { get; set; } 
 

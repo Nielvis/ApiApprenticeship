@@ -30,15 +30,82 @@ namespace ApiTwo.Controllers
         }
 
 
-        [HttpGet("{Id}")]
-        public async Task<IActionResult> GetById(int Id)
+        [HttpGet("{taskId}/clients")]
+        
+        public async Task<IActionResult> GetClientsForTask(int taskId, [FromServices] ApiDbContext db, [FromServices] IHttpClientFactory httpClientFactory)
         {
-            var task = await _context.TaskInputs.FindAsync(Id);
+            var clientsId = db.TaskClients.Where(c => c.TaskId == taskId).Select(c => c.ClientId).ToList();
+
+            var http = httpClientFactory.CreateClient("ApiOne");
+
+            var clients = new List<object>();
+
+            foreach (var id in clientsId) 
+            {
+                var resp = await http.GetAsync($"/clients/{id}");
+                if (resp.IsSuccessStatusCode)
+                {
+                    var c = await resp.Content.ReadFromJsonAsync<object>();
+                    clients.Add(c);
+                }
+            }
+            return Ok(clients);
+        }
+
+        [HttpPost("{taskId}/assign-client/{clientId}")]
+        
+        public async Task<IActionResult> AssignClientForTask(int taskId, int clientId, [FromServices] ApiDbContext db, [FromServices] IHttpClientFactory httpClientFactory)
+        {
+            var task = await _context.TaskInputs.FindAsync(taskId);
+            if (task == null)
+            {
+                NotFound("Tarefa não encontrada");
+            }
+
+            var http = httpClientFactory.CreateClient("ApiOne");
+            var resp = await http.GetAsync($"/clients/{clientId}");
+            if (!resp.IsSuccessStatusCode) 
+            {
+                NotFound("Cliente não existe.");
+            }
+
+            var linkExists = db.TaskClients.Any(c => c.TaskId == taskId && c.ClientId == clientId);
+            if (linkExists) 
+            {
+                return BadRequest("O cliente já está vinculado a uma tarefa!");
+            }
+
+            db.TaskClients.Add(new TaskClient
+            {
+                TaskId = taskId,
+                ClientId = clientId,
+            });
+            await db.SaveChangesAsync();
+
+            return Ok("Cliente vinculado à tarefa.");
+        }
+
+        [HttpGet("{TaskId}")]
+        public async Task<IActionResult> GetById(int taskId)
+        {
+            var task = await _context.TaskInputs.FindAsync(taskId);
             if (task == null)
             {
                 return NotFound();
             }
             return Ok(task);
+        }
+
+        [HttpGet("{clientId}/tasks")]
+        public async Task<IActionResult> GetTasksForClient(int clientId)
+        {
+            var tasks = await _context.TaskClients
+                .Where(c => c.ClientId == clientId).Select(c => c.Task).ToListAsync();
+
+            if (!tasks.Any())
+                return NotFound("Sem tarefas encontradas para esse cliente.");
+
+            return Ok(tasks);
         }
 
         [HttpPost("")]
@@ -53,10 +120,10 @@ namespace ApiTwo.Controllers
             return Ok(postTask);
         }
 
-        [HttpPut("{Id}")]
-        public async Task<IActionResult> UpdateStatus(int Id, [FromBody] UpdateStatusDto updateStatusDto)
+        [HttpPut("{TaskId}")]
+        public async Task<IActionResult> UpdateStatus(int taskId, [FromBody] UpdateStatusDto updateStatusDto)
         {
-            var updateTask = await _context.TaskInputs.FindAsync(Id);
+            var updateTask = await _context.TaskInputs.FindAsync(taskId);
             if (updateTask == null)
             {
                 return NotFound("Tarefa não encontrada");
@@ -69,17 +136,17 @@ namespace ApiTwo.Controllers
             updateTask.Status = updateStatusDto.Status;
             await _context.SaveChangesAsync();
 
-            return Ok(new UpdateStatusOutputDto { 
-                Id = updateTask.Id,
-                Status =  updateTask.Status
+            return Ok(new UpdateStatusOutputDto
+            {
+                TaskId = updateTask.TaskId,
+                Status = updateTask.Status
             });
         }
 
-        [HttpPut("{Id}/description")]
-
-        public async Task<IActionResult> UpdateDescription(int Id, [FromBody] DtoEditDescription editDescriptionDto)
+        [HttpPut("{TaskId}/description")]
+        public async Task<IActionResult> UpdateDescription(int taskId, [FromBody] DtoEditDescription editDescriptionDto)
         {
-            var editDescription = await _context.TaskInputs.FindAsync(Id);
+            var editDescription = await _context.TaskInputs.FindAsync(taskId);
             if (editDescription == null)
             {
                 return NotFound("Tarefa não encontrada");
@@ -88,21 +155,21 @@ namespace ApiTwo.Controllers
             {
                 return BadRequest("Descrição não pode ser nula");
             }
+
             editDescription.Description = editDescriptionDto.Description;
             await _context.SaveChangesAsync();
-            
-            
+
             return Ok(new EditDescriptionOutputDto
             {
-                Id = editDescription.Id,
+                TaskId = editDescription.TaskId,
                 Description = editDescription.Description
             });
         }
 
-        [HttpDelete("{Id}")]
-        public async Task<IActionResult> Delete(int Id)
+        [HttpDelete("{TaskId}")]
+        public async Task<IActionResult> Delete(int taskId)
         {
-            var deleteTask = await _context.TaskInputs.FindAsync(Id);
+            var deleteTask = await _context.TaskInputs.FindAsync(taskId);
             if (deleteTask == null)
             {
                 return NotFound("Tarefa não encontrada");

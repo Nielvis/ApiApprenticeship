@@ -28,15 +28,31 @@ namespace ApiOne.Controllers
             return Ok(await _context.ClientInputs.ToListAsync());
         }
 
-        [HttpGet("{Id}")]
 
-        public async Task<IActionResult> Get(int Id)
+        [HttpGet("{clientId}/tasks")]
+        public async Task<IActionResult> GetTasksForClients(int clientId, [FromServices] IHttpClientFactory httpClientFactory)
         {
-            var client = await _context.ClientInputs.FindAsync(Id);
+            var client = httpClientFactory.CreateClient("ApiTask");
+            var response = await client.GetAsync($"/v1/ApiTask/{clientId}/tasks");
+
+            if(!response.IsSuccessStatusCode)
+            {
+                return NotFound("Tasks not found for the client");
+            }
+
+            var tasks = await response.Content.ReadFromJsonAsync<List<object>>();
+            return Ok(tasks);
+        }
+
+        [HttpGet("{clientId}")]
+
+        public async Task<IActionResult> Get(int clientId)
+        {
+            var client = await _context.ClientInputs.FindAsync(clientId);
 
             if (client == null) 
             {
-                return NotFound($"Client not at {Id} Found");
+                return NotFound($"Client not at {clientId} Found");
             }
 
             return Ok(client);
@@ -56,10 +72,10 @@ namespace ApiOne.Controllers
             return Ok(postClient);
         }
 
-        [HttpDelete("{Id}")]
-        public async Task<IActionResult> Delete(int Id)
+        [HttpDelete("{clientId}")]
+        public async Task<IActionResult> Delete(int clientId)
         {
-            var deleteClient = await _context.ClientInputs.FindAsync(Id);
+            var deleteClient = await _context.ClientInputs.FindAsync(clientId);
             if (deleteClient == null)
             {
                 return NotFound("Client not exist");

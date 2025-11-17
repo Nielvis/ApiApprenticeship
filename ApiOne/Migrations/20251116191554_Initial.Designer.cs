@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ApiOne.Migrations
 {
     [DbContext(typeof(ApiDbContext))]
-    [Migration("20251115043748_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251116191554_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

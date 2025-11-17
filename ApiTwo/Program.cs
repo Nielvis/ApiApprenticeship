@@ -18,6 +18,13 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<ApiDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddHttpClient("ApiOne", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7147");
+});
+
+builder.Services.AddControllers();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
